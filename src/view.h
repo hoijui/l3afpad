@@ -29,5 +29,14 @@ void force_unblock_cb_modified_changed(GtkWidget *view);
 void set_view_scroll(void);
 gint check_text_modification(void);
 GtkWidget *create_text_view(void);
+gboolean autosave_get_state(void);
+void autosave_set_state(gboolean state);
+guint autosave_get_timer(void);
+void autosave_set_timer(guint milliseconds);
+gboolean autosave_get_same_dir(void);
+void autosave_set_same_dir(gboolean state);
+guint autosave_get_immediate_changes(void);
+void autosave_set_immediate_changes(guint num_changes);
+void autosave_reset_num_changes(void);
 
 #endif /* _VIEW_H */
