@@ -225,7 +225,7 @@ gint file_save_real(GtkWidget *view, FileInfo *fi)
 	}
 
 	gtk_text_buffer_set_modified(buffer, FALSE);
-	autosave_cb_file_saved();
+	autosave_cb_file_saved(fi->filename);
 	fclose(fp);
 	g_free(cstr);
 

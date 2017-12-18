@@ -18,8 +18,6 @@
  */
 
 #include "l3afpad.h"
-//#include <gdk/gdkkeysyms.h>
-//#include <string.h>
 #include <stdint.h>
 #include <libgen.h>
 #include <stdlib.h>
@@ -100,52 +98,84 @@ static inline uint32_t hash(const uint32_t value)
 	return value * UINT32_C(2654435761);
 }
 
+/**
+ * Generates a new auto-save filename, and stores it in auto_save_data.filename.
+ */
+static void autosave_generate_filename(GtkTextBuffer *buffer) {
+
+	// Create a hash from our buffers pointer value,
+	// in order to circumvent the case of multiple opened files
+	// with the same name overwriting each others buffer.
+	//
+	// NOTE In case of a 64bit system, we discard the upper 32bits here,
+	//   but as the addresses are very likley to be different in the lower 32bits,
+	//   there should generally be no problem.
+	const uint32_t pointer_hash = hash((uint32_t) buffer);
+	//auto_save_data.filename[MAX_FILE_PATH_SIZE];
+	if (pub->fi->filename == NULL) {
+		// We are editing a text buffer without having chosen a filename yet
+		char *home;
+		home = getenv("HOME");
+		sprintf(auto_save_data.filename, "%s/.cache/l3afpad/buffers/%u.txt", home, pointer_hash);
+	} else {
+		// Known/chosen filename
+		gchar real_filename_base_buf[MAX_FILE_PATH_SIZE];
+		strcpy(real_filename_base_buf, pub->fi->filename);
+		char* real_filename_base = basename(real_filename_base_buf);
+		if (auto_save_same_dir) {
+			gchar real_filename_dir_buf[MAX_FILE_PATH_SIZE];
+			strcpy(real_filename_dir_buf, pub->fi->filename);
+			char* real_filename_dir = dirname(real_filename_dir_buf);
+			sprintf(auto_save_data.filename, "%s/.%u_%s", real_filename_dir, pointer_hash, real_filename_base);
+		} else {
+			char *home;
+			home = getenv("HOME");
+			sprintf(auto_save_data.filename, "%s/.cache/l3afpad/buffers/.%u_%s", home, pointer_hash, real_filename_base);
+		}
+	}
+}
+
+static void autosave_delete_file(gchar *filename)
+{
+	if (filename[0] != '\0') {
+		const int remove_status = remove(filename);
+		if (remove_status != 0) {
+			perror("Warning: Failed to delete auto-save file");
+		}
+
+		filename[0] = '\0';
+	}
+}
+
+static void autosave_try_save(GtkWidget *view) {
+
+	GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
+	if (gtk_text_buffer_get_modified(buffer)) {
+		// store old/current auto-save filename
+		gchar old_filename[MAX_FILE_PATH_SIZE];
+		strcpy(old_filename, auto_save_data.filename);
+
+		autosave_generate_filename(buffer);
+
+		// perform the auto-save
+		FileInfo auto_save_file_info = { auto_save_data.filename, pub->fi->charset, pub->fi->charset_flag, pub->fi->lineend };
+		/*const gint save_err = */file_save_real(view, &auto_save_file_info);
+		gtk_text_buffer_set_modified(buffer, TRUE);
+		autosave_reset_num_changes();
+g_print("l3afpad: auto-saved to file: '%s'\n", auto_save_data.filename);
+
+		if (strcmp(old_filename, auto_save_data.filename) != 0) {
+			autosave_delete_file(old_filename);
+		}
+	}
+}
+
 static gboolean idle_handler(GtkWidget *view) {
 
 	// mark this timer as done
 	auto_save_data.timer_id = 0;
 
-	GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
-	if (gtk_text_buffer_get_modified(buffer)) {
-		// Create a hash from our buffers pointer value,
-		// in order to circumvent the case of multiple opened files
-		// with the same name overwriting each others buffer.
-		// NOTE In case of a 64bit system, we discard the upper 32bits here,
-		//   but as the addresses are very likley to be different in the lower 32bits,
-		//   there should generally be no problem.
-		const uint32_t pointer_hash = hash((uint32_t) buffer);
-		gchar tmp_file_name[MAX_FILE_PATH_SIZE];
-		if (pub->fi->filename == NULL) {
-			// We are editing a text buffer without having chosen a filename yet
-			char *home;
-			home = getenv("HOME");
-			sprintf(tmp_file_name, "%s/.cache/l3afpad/buffers/%u.txt", home, pointer_hash);
-		} else {
-			// Known/chosen filename
-			gchar real_filename_base_buf[MAX_FILE_PATH_SIZE];
-			strcpy(real_filename_base_buf, pub->fi->filename);
-			char* real_filename_base = basename(real_filename_base_buf);
-			if (auto_save_same_dir) {
-				gchar real_filename_dir_buf[MAX_FILE_PATH_SIZE];
-				strcpy(real_filename_dir_buf, pub->fi->filename);
-				char* real_filename_dir = dirname(real_filename_dir_buf);
-				sprintf(tmp_file_name, "%s/.%u_%s", real_filename_dir, pointer_hash, real_filename_base);
-			} else {
-				char *home;
-				home = getenv("HOME");
-				sprintf(tmp_file_name, "%s/.cache/l3afpad/buffers/.%u_%s", home, pointer_hash, real_filename_base);
-			}
-		}
-
-g_print("l3afpad: auto-saving to file: '%s'\n", tmp_file_name);
-		gchar *real_filename = pub->fi->filename;
-		pub->fi->filename = tmp_file_name;
-		/*const gint save_err = */file_save_real(view, pub->fi);
-		pub->fi->filename = real_filename;
-		gtk_text_buffer_set_modified(buffer, TRUE);
-
-		autosave_reset_num_changes();
-	}
+	autosave_try_save(view);
 
 	// stop this idle signal
 	return FALSE;
@@ -165,17 +195,25 @@ void autosave_cb_buffer_changed(GtkTextBuffer *buffer, GtkWidget *view)
 	if (auto_save) {
 		if (auto_save_data.timer_id > 0) {
 			g_source_remove(auto_save_data.timer_id);
+			auto_save_data.timer_id = 0;
 		}
 		if (auto_save_data.changes >= auto_save_immediate_changes) {
-			time_handler(view);
+			autosave_try_save(view);
 		} else {
 			auto_save_data.timer_id = g_timeout_add(auto_save_timer, (GSourceFunc) time_handler, view);
 		}
 	}
 }
 
-void autosave_cb_file_saved()
+void autosave_cb_file_saved(gchar *filename)
 {
-	autosave_reset_num_changes();
+	if (auto_save_data.timer_id > 0) {
+		g_source_remove(auto_save_data.timer_id);
+		auto_save_data.timer_id = 0;
+	}
+	if (strcmp(filename, auto_save_data.filename) != 0) {
+		autosave_delete_file(auto_save_data.filename);
+		AutoSaveData_init(&auto_save_data);
+	}
 }
 

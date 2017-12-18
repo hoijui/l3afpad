@@ -58,10 +58,11 @@ void autosave_set_immediate_changes(guint num_changes);
 /** Called when the text in the internal buffer changed */
 void autosave_cb_buffer_changed(GtkTextBuffer *buffer, GtkWidget *view);
 /**
- * Called when the buffer contents were save in a propper file,
- * as chosen by the user.
+ * Called when the buffer contents were save in a file,
+ * which might be the propper one, chosen by the user,
+ * or the auto-save file.
  */
-void autosave_cb_file_saved();
+void autosave_cb_file_saved(gchar* filename);
 
 #endif /* _AUTOSAVE_H */
 
