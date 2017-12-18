@@ -31,8 +31,23 @@ static guint auto_save_timer = 10000;
 static gboolean auto_save_same_dir = TRUE;
 static guint auto_save_immediate_changes = 150;
 
-static guint auto_save_timer_id = 0;
-static guint auto_save_num_changes = 0;
+typedef struct {
+	/** GTK handler/signal ID of the auto-save timer or 0 if none. */
+	guint timer_id;
+	/** Number of changes to the text buffer since last (auto-)save. */
+	guint changes;
+	/** Name of the temporary auto-save file. Empty ([0] == '\0') if none. */
+	gchar filename[256];
+} AutoSaveData;
+
+static AutoSaveData auto_save_data = { 0, 0, "" };
+
+static void AutoSaveData_init(AutoSaveData *data)
+{
+	data->timer_id = 0;
+	data->changes = 0;
+	data->filename[0] = '\0';
+}
 
 gboolean autosave_get_state(void)
 {
@@ -74,9 +89,9 @@ void autosave_set_immediate_changes(guint num_changes)
 	auto_save_immediate_changes = num_changes;
 }
 
-void autosave_reset_num_changes(void)
+static void autosave_reset_num_changes(void)
 {
-	auto_save_num_changes = 0;
+	auto_save_data.changes = 0;
 }
 
 /** @see https://stackoverflow.com/questions/11871245/knuth-multiplicative-hash */
@@ -88,7 +103,7 @@ static inline uint32_t hash(const uint32_t value)
 static gboolean idle_handler(GtkWidget *view) {
 
 	// mark this timer as done
-	auto_save_timer_id = 0;
+	auto_save_data.timer_id = 0;
 
 	GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
 	if (gtk_text_buffer_get_modified(buffer)) {
@@ -129,7 +144,7 @@ g_print("l3afpad: auto-saving to file: '%s'\n", tmp_file_name);
 		pub->fi->filename = real_filename;
 		gtk_text_buffer_set_modified(buffer, TRUE);
 
-		auto_save_num_changes = 0;
+		autosave_reset_num_changes();
 	}
 
 	// stop this idle signal
@@ -146,16 +161,21 @@ static gboolean time_handler(GtkWidget *view) {
 
 void autosave_cb_buffer_changed(GtkTextBuffer *buffer, GtkWidget *view)
 {
-	auto_save_num_changes++;
+	auto_save_data.changes++;
 	if (auto_save) {
-		if (auto_save_timer_id > 0) {
-			g_source_remove(auto_save_timer_id);
+		if (auto_save_data.timer_id > 0) {
+			g_source_remove(auto_save_data.timer_id);
 		}
-		if (auto_save_num_changes >= auto_save_immediate_changes) {
+		if (auto_save_data.changes >= auto_save_immediate_changes) {
 			time_handler(view);
 		} else {
-			auto_save_timer_id = g_timeout_add(auto_save_timer, (GSourceFunc) time_handler, view);
+			auto_save_data.timer_id = g_timeout_add(auto_save_timer, (GSourceFunc) time_handler, view);
 		}
 	}
+}
+
+void autosave_cb_file_saved()
+{
+	autosave_reset_num_changes();
 }
 

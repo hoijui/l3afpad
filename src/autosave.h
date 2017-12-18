@@ -20,20 +20,48 @@
 #ifndef _AUTOSAVE_H
 #define _AUTOSAVE_H
 
+/**
+ * Returns the value of the config setting "AutoSave".
+ * This setting determines whether auto-save functionality is enabled.
+ */
 gboolean autosave_get_state(void);
 void autosave_set_state(gboolean state);
 
+/**
+ * Returns the value of the config setting "AutoSaveTimer".
+ * This setting determines the time in milliseconds to wait
+ * before saving buffer contents to a temporary file
+ * after the last (unsaved) change.
+ */
 guint autosave_get_timer(void);
 void autosave_set_timer(guint milliseconds);
 
+/**
+ * Returns the value of the config setting "AutoSaveSameDir".
+ * This setting determines whether to save temp-files in the same dir
+ * as the real file, or in the system-wide l3afpad auto-save dir.
+ * This setting only has an effect if a filename is already chosen,
+ * as (Unnamed) buffers will always be auto-saved in the system wide
+ * auto-save dir.
+ */
 gboolean autosave_get_same_dir(void);
 void autosave_set_same_dir(gboolean state);
 
+/**
+ * Returns the value of the config setting "AutoSaveImmediateChanges".
+ * This setting determines the ammount of changes to a buffer
+ * after which auto-saveing is performed immediatly.
+ */
 guint autosave_get_immediate_changes(void);
 void autosave_set_immediate_changes(guint num_changes);
-void autosave_reset_num_changes(void);
 
+/** Called when the text in the internal buffer changed */
 void autosave_cb_buffer_changed(GtkTextBuffer *buffer, GtkWidget *view);
+/**
+ * Called when the buffer contents were save in a propper file,
+ * as chosen by the user.
+ */
+void autosave_cb_file_saved();
 
 #endif /* _AUTOSAVE_H */
 
