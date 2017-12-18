@@ -1,6 +1,6 @@
 /*
  *  L3afpad - GTK+ based simple text editor
- *  Copyright (C) 2004-2005 Tarot Osuji
+ *  Copyright (C) 2017 Tarot Osuji
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -17,17 +17,23 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _VIEW_H
-#define _VIEW_H
+#ifndef _AUTOSAVE_H
+#define _AUTOSAVE_H
 
-gint get_current_keyval(void);
-void clear_current_keyval(void);
-void scroll_to_cursor(GtkTextBuffer *buffer, gdouble within_margin);
-void force_call_cb_modified_changed(GtkWidget *view);
-void force_block_cb_modified_changed(GtkWidget *view);
-void force_unblock_cb_modified_changed(GtkWidget *view);
-void set_view_scroll(void);
-gint check_text_modification(void);
-GtkWidget *create_text_view(void);
+gboolean autosave_get_state(void);
+void autosave_set_state(gboolean state);
 
-#endif /* _VIEW_H */
+guint autosave_get_timer(void);
+void autosave_set_timer(guint milliseconds);
+
+gboolean autosave_get_same_dir(void);
+void autosave_set_same_dir(gboolean state);
+
+guint autosave_get_immediate_changes(void);
+void autosave_set_immediate_changes(guint num_changes);
+void autosave_reset_num_changes(void);
+
+void autosave_cb_buffer_changed(GtkTextBuffer *buffer, GtkWidget *view);
+
+#endif /* _AUTOSAVE_H */
+
