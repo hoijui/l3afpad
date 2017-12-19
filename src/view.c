@@ -69,6 +69,7 @@ gint check_text_modification(void)
 		g_free(str);
 		switch (res) {
 		case GTK_RESPONSE_NO:
+			autosave_discard_temp_file();
 			return 0;
 		case GTK_RESPONSE_YES:
 			if (!on_file_save())

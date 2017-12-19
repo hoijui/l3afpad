@@ -63,6 +63,10 @@ void autosave_cb_buffer_changed(GtkTextBuffer *buffer, GtkWidget *view);
  * or the auto-save file.
  */
 void autosave_cb_file_saved(gchar* filename);
+/**
+ * Discards/deletes the (temporary) auto-save file.
+ */
+void autosave_discard_temp_file();
 
 #endif /* _AUTOSAVE_H */
 

@@ -205,15 +205,27 @@ void autosave_cb_buffer_changed(GtkTextBuffer *buffer, GtkWidget *view)
 	}
 }
 
-void autosave_cb_file_saved(gchar *filename)
+static void autosave_kill_timer()
 {
 	if (auto_save_data.timer_id > 0) {
 		g_source_remove(auto_save_data.timer_id);
 		auto_save_data.timer_id = 0;
 	}
+}
+
+void autosave_cb_file_saved(gchar *filename)
+{
+	autosave_kill_timer();
 	if (strcmp(filename, auto_save_data.filename) != 0) {
-		autosave_delete_file(auto_save_data.filename);
-		AutoSaveData_init(&auto_save_data);
+		// not saving to our temporary/auto-save file
+		autosave_discard_temp_file();
 	}
+}
+
+void autosave_discard_temp_file()
+{
+	autosave_kill_timer();
+	autosave_delete_file(auto_save_data.filename);
+	AutoSaveData_init(&auto_save_data);
 }
 
