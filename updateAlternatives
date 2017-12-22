@@ -1,0 +1,15 @@
+#!/bin/bash
+# Linux shell script to add our executable to the list
+# of choosable default GUI text editors in gnome.
+# If successfull, you can choose this editor with:
+#  update-alternatives --config gnome-text-editor
+
+BIN_PATH="${1:=/usr/local/bin/l3afpad}"
+
+sudo update-alternatives \
+	--install \
+	/usr/bin/gnome-text-editor \
+	gnome-text-editor \
+	"${BIN_PATH}" \
+	60
+
