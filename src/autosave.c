@@ -162,7 +162,7 @@ static void autosave_try_save(GtkWidget *view) {
 		/*const gint save_err = */file_save_real(view, &auto_save_file_info);
 		gtk_text_buffer_set_modified(buffer, TRUE);
 		autosave_reset_num_changes();
-g_print("l3afpad: auto-saved to file: '%s'\n", auto_save_data.filename);
+		//g_print("l3afpad: auto-saved to file: '%s'\n", auto_save_data.filename);
 
 		if (strcmp(old_filename, auto_save_data.filename) != 0) {
 			autosave_delete_file(old_filename);
